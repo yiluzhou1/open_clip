@@ -147,7 +147,9 @@ Running regression tests against a specific git revision or tag:
     ```
 
 ### Sample single-process running code:
-
+```bash
+python -m src.training.main_test --help
+```
 ```bash
 python -m training.main \
     --save-frequency 1 \
