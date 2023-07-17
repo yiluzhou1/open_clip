@@ -148,7 +148,24 @@ Running regression tests against a specific git revision or tag:
 
 ### Sample single-process running code:
 ```bash
-python -m src.training.main_test --help
+python -m src.training.main_test ^
+--train-data "./tests/data/roco_train.csv" ^
+--train-data "./tests/data/roco_train.csv" ^
+--val-data "./tests/data/roco_validation.csv" ^
+--csv-img-key filepath ^
+--csv-caption-key caption ^
+--warmup 1000 ^
+--logs "F:/Train/openclip/" ^
+--batch-size 56 ^
+--lr 1e-5 ^
+--wd 0.1 ^
+--epochs 1 ^
+--workers 4 ^
+--model "ViT-L-14" ^
+--save-frequency 1 ^
+--pretrained "commonpool_xl_laion_s13b_b90k" ^
+--report-to "tensorboard" ^
+--log-every-n-steps 100
 ```
 ```bash
 python -m training.main \

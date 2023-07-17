@@ -26,10 +26,10 @@ class ParseKwargs(argparse.Action):
 def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--train-dataXXXX",
+        "--train-data",
         type=str,
         default=None,
-        help="Path to file(s) with training dataXXXX. When using webdataset, multiple datasources can be combined using the `::` separator.",
+        help="Path to file(s) with training data. When using webdataset, multiple datasources can be combined using the `::` separator.",
     )
     parser.add_argument(
         "--train-data-upsampling-factors",

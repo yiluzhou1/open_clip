@@ -83,7 +83,7 @@ def main(dataset_dir: str, input_text_name: str, out_dir: str, out_csv_file: str
     # Write the CSV file
     with open(out_csv_path, 'w', newline='') as csvfile:
         fieldnames = ['filepath', 'caption']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter='\t')
         writer.writeheader()
         for row in data:
             writer.writerow(row)
