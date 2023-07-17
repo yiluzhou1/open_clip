@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from open_clip import get_input_dtype, get_tokenizer, build_zero_shot_classifier, \
+from ..open_clip import get_input_dtype, get_tokenizer, build_zero_shot_classifier, \
     IMAGENET_CLASSNAMES, OPENAI_IMAGENET_TEMPLATES
 from .precision import get_autocast
 
