@@ -92,9 +92,9 @@ def main(dataset_dir: str, input_text_name: str, out_dir: str, out_csv_file: str
 if __name__ == '__main__':
     """
     Example: 
-    python generate_roco_csv.py --dataset_dir "E:\Work\roco-dataset\data\train\radiology" --input_text_name "captions.txt" --out_dir ".\data" --out_csv_file "roco_train.csv"
-    python generate_roco_csv.py --dataset_dir "E:\Work\roco-dataset\data\validation\radiology" --input_text_name "captions.txt" --out_dir ".\data" --out_csv_file "roco_validation.csv"
-    python generate_roco_csv.py --dataset_dir "E:\Work\roco-dataset\data\test\radiology" --input_text_name "captions.txt" --out_dir ".\data" --out_csv_file "roco_test.csv"
+    python generate_roco_csv.py --dataset_dir "/mnt/eds_ml/Users/Yilu_ML/roco-dataset/data/train/radiology" --input_text_name "captions.txt" --out_dir "./data" --out_csv_file "roco_train.csv"
+    python generate_roco_csv.py --dataset_dir "/mnt/eds_ml/Users/Yilu_ML/roco-dataset/data/validation/radiology" --input_text_name "captions.txt" --out_dir "./data" --out_csv_file "roco_validation.csv"
+    python generate_roco_csv.py --dataset_dir "/mnt/eds_ml/Users/Yilu_ML/roco-dataset/data/test/radiology" --input_text_name "captions.txt" --out_dir "./data" --out_csv_file "roco_test.csv"
     """
     
     parser = argparse.ArgumentParser()
