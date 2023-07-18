@@ -178,15 +178,19 @@ def create_model(
 
         # cast_dtype set for fp16 and bf16 (manual mixed-precision), not set for 'amp' or 'pure' modes
         cast_dtype = get_cast_dtype(precision)
+        print(f'TODO: cast_dtype={cast_dtype}') #None
         is_hf_model = 'hf_model_name' in model_cfg.get('text_cfg', {})
+        print(f'TODO: is_hf_model={is_hf_model}') #False
         custom_text = model_cfg.pop('custom_text', False) or force_custom_text or is_hf_model
-
+        print(f'TODO: custom_text={custom_text}') #False
+        
         if custom_text:
             if is_hf_model:
                 model_cfg['text_cfg']['hf_model_pretrained'] = pretrained_hf
             if "coca" in model_name:
                 model = CoCa(**model_cfg, cast_dtype=cast_dtype)
             else:
+                print(f'TODO: model_name={model_name}')
                 model = CustomTextCLIP(**model_cfg, cast_dtype=cast_dtype)
         else:
             model = CLIP(**model_cfg, cast_dtype=cast_dtype)
@@ -320,7 +324,7 @@ def create_model_and_transforms(
         cache_dir=cache_dir,
         output_dict=output_dict,
     )
-
+    print(f'model_name0={model_name}')
     image_mean = image_mean or getattr(model.visual, 'image_mean', None)
     image_std = image_std or getattr(model.visual, 'image_std', None)
     preprocess_train = image_transform(
