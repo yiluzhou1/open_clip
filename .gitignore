@@ -5,7 +5,10 @@ features/
 results/
 
 tests/data/
+tests/roco-data/
 *.pt
+*_internal.ipynb
+*_CMD.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

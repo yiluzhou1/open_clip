@@ -27,14 +27,14 @@ try:
 except ImportError:
     hvd = None
 
-from ..open_clip import create_model_and_transforms, trace_model, get_tokenizer, create_loss
-from ..training.data import get_data
-from ..training.distributed import is_master, init_distributed_device, broadcast_object
-from ..training.logger import setup_logging
-from ..training.params import parse_args
-from ..training.scheduler import cosine_lr, const_lr, const_lr_cooldown
-from ..training.train import train_one_epoch, evaluate
-from ..training.file_utils import pt_load, check_exists, start_sync_process, remote_sync
+from open_clip import create_model_and_transforms, trace_model, get_tokenizer, create_loss
+from training.data import get_data
+from training.distributed import is_master, init_distributed_device, broadcast_object
+from training.logger import setup_logging
+from training.params import parse_args
+from training.scheduler import cosine_lr, const_lr, const_lr_cooldown
+from training.train import train_one_epoch, evaluate
+from training.file_utils import pt_load, check_exists, start_sync_process, remote_sync
 
 
 LATEST_CHECKPOINT_NAME = "epoch_latest.pt"

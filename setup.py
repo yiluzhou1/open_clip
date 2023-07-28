@@ -25,7 +25,7 @@ setup(
     description='OpenCLIP',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/mlfoundations/open_clip',
+    url='https://github.com/yiluzhou1/open_clip',
     author='',
     author_email='',
     classifiers=[

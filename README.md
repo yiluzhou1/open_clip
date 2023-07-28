@@ -148,9 +148,9 @@ Running regression tests against a specific git revision or tag:
 
 ### Sample single-process running code:
 ```bash
-python -m src.training.main_test \
---train-data "./tests/data/roco_train.csv" \
---val-data "./tests/data/roco_validation.csv" \
+nohup python -m training.main_test \
+--train-data "./tests/roco-data/roco_train.csv" \
+--val-data "./tests/roco-data/roco_validation.csv" \
 --csv-img-key filepath \
 --csv-caption-key caption \
 --warmup 1000 \
@@ -162,13 +162,14 @@ python -m src.training.main_test \
 --workers 4 \
 --model "ViT-L-14" \
 --save-frequency 1 \
---pretrained "/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip/2023_07_17-12_28_34-model_ViT-L-14-lr_1e-06-b_512-j_4-p_amp/checkpoints/epoch_1.pt" \
+--pretrained "/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip/2023_07_17-13_09_01-model_ViT-L-14-lr_1e-06-b_256-j_4-p_amp/checkpoints/epoch_30.pt" \
 --report-to "tensorboard" \
 --log-every-n-steps 100 \
 --accum-freq 4 \
 --grad-checkpointing \
 --local-loss \
 --gather-with-grad \
+> "/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip/ViT-L_14_1.txt" 2>&1 &
 ```
 ```bash
 python -m training.main \
