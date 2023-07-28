@@ -50,10 +50,10 @@ def main(dataset_dir: str, input_text_name: str, out_dir: str, out_csv_file: str
         except:
             continue
         #Skip if the caption is too short
-        if len(caption) < 10:
-            continue
-        if len(caption.split()) < 5:
-            continue
+        # if len(caption) < 10:
+        #     continue
+        # if len(caption.split()) < 5:
+        #     continue
 
         # Construct the path to the image file
         image_path = os.path.join(image_dir, f'{image_id}.jpg')

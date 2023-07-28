@@ -169,6 +169,7 @@ nohup python -m training.main_test \
 --grad-checkpointing \
 --local-loss \
 --gather-with-grad \
+--force-patch-dropout 0.2\
 > "/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip/ViT-L_14_1.txt" 2>&1 &
 ```
 ```bash
@@ -394,7 +395,30 @@ python -m training.main \
     --coca-caption-loss-weight 1 \
     --log-every-n-steps 100
 ```
-
+```bash
+nohup python -m training.main_test \
+    --train-data "./tests/roco-data/roco_train.csv" \
+    --val-data "./tests/roco-data/roco_validation.csv" \
+    --csv-img-key filepath \
+    --csv-caption-key title \
+    --warmup 1000 \
+    --logs "/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip/" \
+    --batch-size 32 \
+    --lr 1e-5 \
+    --wd 0.1 \
+    --epochs 5 \
+    --workers 4 \
+    --model "coca_ViT-L-14" \
+    --save-frequency 1 \
+    --pretrained "mscoco_finetuned_laion2B-s13B-b90k" \
+    --report-to "tensorboard" \
+    --log-every-n-steps 100 \
+    --accum-freq 4 \
+    --grad-checkpointing \
+    --local-loss \
+    --gather-with-grad \
+    > "/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip/coca_ViT-L_14_1.txt" 2>&1 &
+```
 This is a general setting, open_clip has very parameters that can be set, ```python -m training.main --help``` should show them. The only relevant change compared to pre-training are the two arguments
 
 ```bash
