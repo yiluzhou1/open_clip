@@ -25,7 +25,7 @@ decorator==5.1.1
 einops==0.6.1
 executing==1.2.0
 fairscale==0.4.13
-faiss-gpu==1.7.2
+# faiss-gpu==1.7.2
 filelock==3.9.0
 fire==0.5.0
 fonttools==4.40.0
