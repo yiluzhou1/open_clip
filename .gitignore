@@ -10,6 +10,7 @@ tests/Globus*
 *.pt
 *_internal.ipynb
 *_CMD.sh
+*.onnx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
