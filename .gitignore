@@ -6,6 +6,7 @@ results/
 
 tests/data/
 tests/roco-data/
+tests/Digital_Knee_Xray*/
 tests/Globus*
 *.pt
 *_internal.ipynb

@@ -56,7 +56,7 @@ def main(dataset_dir: str, input_text_name: str, out_dir: str, out_csv_file: str
         #     continue
 
         # Construct the path to the image file
-        image_path = os.path.join(image_dir, f'{image_id}.jpg')
+        image_path = os.path.join(image_dir, f'{image_id}.png')
 
         # Check if the image file exists
         if not os.path.exists(image_path):

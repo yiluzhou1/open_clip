@@ -1,6 +1,6 @@
-torch>=1.9.0
+torch
 torchvision
-webdataset>=0.2.5
+webdataset
 regex
 ftfy
 tqdm
