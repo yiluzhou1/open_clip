@@ -2,7 +2,7 @@ import warnings
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
-import torch
+import torch, sys, os
 import torch.nn as nn
 import torchvision.transforms.functional as F
 
@@ -21,6 +21,7 @@ class AugmentationCfg:
     re_prob: Optional[float] = None
     re_count: Optional[int] = None
     use_timm: bool = False
+    augment_dir: Optional[str] = None
 
 
 class ResizeMaxSize(nn.Module):
@@ -82,6 +83,7 @@ def image_transform(
     if is_train:
         aug_cfg_dict = {k: v for k, v in asdict(aug_cfg).items() if v is not None}
         use_timm = aug_cfg_dict.pop('use_timm', False)
+        augment_dir = aug_cfg_dict.pop('augment_dir', None)
         if use_timm:
             from timm.data import create_transform  # timm can still be optional
             if isinstance(image_size, (tuple, list)):
@@ -101,6 +103,12 @@ def image_transform(
                 re_mode='pixel',
                 **aug_cfg_dict,
             )
+        elif augment_dir is not None:
+            if not os.path.exists(os.path.join(augment_dir, 'image_augmentation.py')):
+                raise ValueError(f'In folder augment_dir ({augment_dir}), there must contain image_augmentation.py')
+            sys.path.append(augment_dir)
+            from image_augmentation import customized_augmentation
+            train_transform = customized_augmentation(image_size, normalize)
         else:
             train_transform = Compose([
                 RandomResizedCrop(

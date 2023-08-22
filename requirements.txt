@@ -7,4 +7,5 @@ huggingface_hub
 sentencepiece
 protobuf
 timm
+tensorboard
 transformers==4.30.2
