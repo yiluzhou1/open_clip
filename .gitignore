@@ -6,6 +6,7 @@ results/
 
 tests/data/
 tests/roco-data/
+Body_Parts_XRay/
 tests/Digital_Knee_Xray*/
 tests/Globus*
 *.pt
