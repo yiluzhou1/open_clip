@@ -108,7 +108,7 @@ def image_transform(
                 raise ValueError(f'In folder augment_dir ({augment_dir}), there must contain image_augmentation.py')
             sys.path.append(augment_dir)
             from image_augmentation import customized_augmentation
-            train_transform = customized_augmentation(image_size, normalize)
+            train_transform = customized_augmentation(image_size)
         else:
             train_transform = Compose([
                 RandomResizedCrop(
@@ -123,7 +123,7 @@ def image_transform(
             if aug_cfg_dict:
                 warnings.warn(f'Unused augmentation cfg items, specify `use_timm` to use ({list(aug_cfg_dict.keys())}).')
         return train_transform
-    else:
+    else: # not training case
         if resize_longest_max:
             transforms = [
                 ResizeMaxSize(image_size, fill=fill_color)
@@ -133,9 +133,20 @@ def image_transform(
                 Resize(image_size, interpolation=InterpolationMode.BICUBIC),
                 CenterCrop(image_size),
             ]
-        transforms.extend([
-            _convert_to_rgb,
-            ToTensor(),
-            normalize,
-        ])
+        if augment_dir is not None:
+            if not os.path.exists(os.path.join(augment_dir, 'image_augmentation.py')):
+                raise ValueError(f'In folder augment_dir ({augment_dir}), there must contain image_augmentation.py')
+            sys.path.append(augment_dir)
+            from image_augmentation import CLAHE
+            transforms.extend([
+                _convert_to_rgb,
+                CLAHE,
+                ToTensor(),
+            ])
+        else:
+            transforms.extend([
+                _convert_to_rgb,
+                ToTensor(),
+                normalize,
+            ])
         return Compose(transforms)
