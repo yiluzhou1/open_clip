@@ -122,13 +122,9 @@ def customized_augmentation(image_size):
     ])
 
     train_transform = Compose([
-        # pre_transforms,
-        # AlbumentationsTransform(albu_transforms),
         # 0.3 means 30% of images will be augmented
         RandomAugmentation(0.3, pre_transforms, AlbumentationsTransform(albu_transforms)),
         post_transforms
     ])
-    
-
 
     return train_transform
