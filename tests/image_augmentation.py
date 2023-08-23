@@ -7,7 +7,7 @@ from torchvision.transforms import (Normalize, Compose, RandomResizedCrop, Rando
                                    ToTensor, Resize, CenterCrop, Lambda)
 import random, torch
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 """
 Example:
@@ -24,6 +24,9 @@ refs:
 https://www.kaggle.com/code/raddar/popular-x-ray-image-normalization-techniques
 https://towardsdatascience.com/deep-learning-in-healthcare-x-ray-imaging-part-5-data-augmentation-and-image-normalization-1ead1c02cfe3
 """
+
+# If you want to prevent the bottom line of image to be cropped, enter 'bottom'. Otherwise, leave empty string.
+crop_preservation = 'bottom' # 'bottom' or ''
 
 class AlbumentationsTransform:
     def __init__(self, transform=None):
@@ -84,16 +87,65 @@ def percentile_scaling(img_tensor):
 def _convert_to_rgb(image):
     return image.convert('RGB')
 
+def invert_background(img):
+    # Convert the background color for xray images
+    img = ImageOps.invert(img)
+    return img
+
+
+
 def customized_augmentation(image_size):
     """
     Customize the augmentation pipeline as per your choice.    
     """
+    def resize(img):
+        # Resize the image to image_size
+        img = img.resize(image_size, Image.BICUBIC)
+        return img
+    
+    def custom_random_resize_crop_preserve_bottom(img):
+        """
+        TODO: Custom function for Random Crop that ensures the bottom line is preserved.
+        It first resizes the image to a randomly chosen size and then crops it to the desired size.
+        """
+        # Randomly choose a scale between 90% and 100%
+        scale_factor = random.uniform(0.9, 1.0)
+        
+        # Compute the crop dimensions based on the scale
+        crop_height = int(img.height * scale_factor)
+        crop_width = int(img.width * scale_factor)
+        
+        # Set the top left corner of the crop
+        top = img.height - crop_height
+        left = random.randint(0, img.width - crop_width)
+        
+        img = img.crop((left, top, left + crop_width, img.height))
+        resized_img = img.resize(image_size, Image.BICUBIC)
+        return resized_img
+    
+    if crop_preservation == 'bottom':
+        # need to preserve the bottom line
+        customize_RandomResizedCrop = Compose([
+            Lambda(custom_random_resize_crop_preserve_bottom),
+            ])
+        max_vertical_translate = 0
+        
+    else:
+        customize_RandomResizedCrop = Compose([
+        RandomResizedCrop(
+            image_size,
+            scale=(0.9, 1.1),
+            interpolation=InterpolationMode.BICUBIC,
+        ),
+        ])
+        max_vertical_translate = 0.1
+    
     # Albumentations transformations
     albu_transforms = A.Compose([
         # A.ElasticTransform(p=0.5, alpha=120, sigma=120 * 0.05, alpha_affine=120 * 0.03),  # Elastic deformation
         # A.HistogramMatching(p=0.5, reference_images=None),  # Histogram Equalization (note: you need reference images)
         # Add any other albumentations transforms here
-        A.GaussianBlur(p=0.3, blur_limit=(3, 5))
+        A.GaussianBlur(p=0.3, blur_limit=(3, 5)),
     ])
     
     # torchvision transforms
@@ -102,18 +154,14 @@ def customized_augmentation(image_size):
     ])
 
     pre_resize = Compose([
-        RandomResizedCrop(
-            image_size,
-            scale=(0.9, 1.1),
-            interpolation=InterpolationMode.BICUBIC,
-        ),
+        Lambda(resize)
     ])
 
     pre_transforms = Compose([
         RandomHorizontalFlip(p=0.5),
         ColorJitter(brightness=0.15, contrast=0.15),
-        RandomAffine(degrees=0, translate=(0.1, 0.1)),
-        RandomCrop(size=image_size, padding=10),
+        RandomAffine(degrees=0, translate=(0.1, max_vertical_translate)),
+        RandomCrop(size=image_size, padding=10), #TODO
         # GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 2.0)),
     ])
 
@@ -128,8 +176,10 @@ def customized_augmentation(image_size):
 
     train_transform = Compose([
         AlbumentationsTransform2(clahe),
-        RandomAugmentation(0.3, pre_rotation),
-        pre_resize, # all images will have be resized here
+        RandomAugmentation(0.2, Lambda(invert_background)), #20% images: background color will be inverted
+        RandomAugmentation(0.3, pre_rotation), # 30% images: RandomRotation
+        pre_resize, # all images do resize
+        RandomAugmentation(0.25, customize_RandomResizedCrop), # 25% images will have be resized here
         # 0.3 means 30% of images will be augmented
         RandomAugmentation(0.3, pre_transforms, AlbumentationsTransform(albu_transforms)),
         post_transforms
