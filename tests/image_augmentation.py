@@ -59,8 +59,8 @@ class RandomAugmentation:
         return img
 
 # Define the CLAHE transformation
-clahe = A.CLAHE(p=1.0, clip_limit=4.0, tile_grid_size=(8, 8))
-CLAHE = AlbumentationsTransform2(clahe), # normalizing using Adaptive Histogram Equalization (CLAHE)
+clahe = A.CLAHE(p=1.0, clip_limit=6.0, tile_grid_size=(12, 12))
+CLAHE = AlbumentationsTransform2(clahe) # normalizing using Adaptive Histogram Equalization (CLAHE)
 
 # Define the mean and standard deviation of the dataset
 MEAN = (0.3942, 0.3942, 0.3942)#(0.48145466, 0.4578275, 0.40821073)
@@ -93,17 +93,23 @@ def customized_augmentation(image_size):
         # A.ElasticTransform(p=0.5, alpha=120, sigma=120 * 0.05, alpha_affine=120 * 0.03),  # Elastic deformation
         # A.HistogramMatching(p=0.5, reference_images=None),  # Histogram Equalization (note: you need reference images)
         # Add any other albumentations transforms here
-        A.GaussianBlur(p=0.2, blur_limit=(3, 5))
+        A.GaussianBlur(p=0.3, blur_limit=(3, 5))
     ])
     
     # torchvision transforms
-    pre_transforms = Compose([    
+    pre_rotation = Compose([
         RandomRotation(degrees=15),
+    ])
+
+    pre_resize = Compose([
         RandomResizedCrop(
             image_size,
             scale=(0.9, 1.1),
             interpolation=InterpolationMode.BICUBIC,
         ),
+    ])
+
+    pre_transforms = Compose([
         RandomHorizontalFlip(p=0.5),
         ColorJitter(brightness=0.15, contrast=0.15),
         RandomAffine(degrees=0, translate=(0.1, 0.1)),
@@ -113,7 +119,6 @@ def customized_augmentation(image_size):
 
     post_transforms = Compose([
         _convert_to_rgb,
-        CLAHE, # normalizing using Adaptive Histogram Equalization (CLAHE)
         # Always ensure that ToTensor() is one of the last transformations, because it changes the data type and order of dimensions.
         ToTensor(),
         # mean_std,                      # normalizing using mean + standard deviation
@@ -122,6 +127,9 @@ def customized_augmentation(image_size):
     ])
 
     train_transform = Compose([
+        AlbumentationsTransform2(clahe),
+        RandomAugmentation(0.3, pre_rotation),
+        pre_resize, # all images will have be resized here
         # 0.3 means 30% of images will be augmented
         RandomAugmentation(0.3, pre_transforms, AlbumentationsTransform(albu_transforms)),
         post_transforms

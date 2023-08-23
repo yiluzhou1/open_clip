@@ -5,9 +5,12 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Union
 import torch, sys, os
 import torch.nn as nn
 import torchvision.transforms.functional as F
+from PIL import Image
+import numpy as np
 
 from torchvision.transforms import Normalize, Compose, RandomResizedCrop, InterpolationMode, ToTensor, Resize, \
     CenterCrop
+import albumentations as A
 
 from .constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
 
@@ -50,6 +53,20 @@ class ResizeMaxSize(nn.Module):
         return img
 
 
+class AlbumentationsTransform2:
+    def __init__(self, transform=None):
+        self.transform = transform
+
+    def __call__(self, img):
+        img = np.array(img)  # Convert to numpy array
+        img = self.transform(image=img)['image']
+        return Image.fromarray(img)  # Convert back to PIL image
+
+# Define the CLAHE transformation
+clahe = A.CLAHE(p=1.0, clip_limit=4.0, tile_grid_size=(8, 8))
+CLAHE = AlbumentationsTransform2(clahe) # normalizing using Adaptive Histogram Equalization (CLAHE)
+
+
 def _convert_to_rgb(image):
     return image.convert('RGB')
 
@@ -62,6 +79,7 @@ def image_transform(
         resize_longest_max: bool = False,
         fill_color: int = 0,
         aug_cfg: Optional[Union[Dict[str, Any], AugmentationCfg]] = None,
+        augment_dir: Optional[str] = None,
 ):
     mean = mean or OPENAI_DATASET_MEAN
     if not isinstance(mean, (list, tuple)):
@@ -133,20 +151,10 @@ def image_transform(
                 Resize(image_size, interpolation=InterpolationMode.BICUBIC),
                 CenterCrop(image_size),
             ]
-        if augment_dir is not None:
-            if not os.path.exists(os.path.join(augment_dir, 'image_augmentation.py')):
-                raise ValueError(f'In folder augment_dir ({augment_dir}), there must contain image_augmentation.py')
-            sys.path.append(augment_dir)
-            from image_augmentation import CLAHE
-            transforms.extend([
-                _convert_to_rgb,
-                CLAHE,
-                ToTensor(),
-            ])
-        else:
-            transforms.extend([
-                _convert_to_rgb,
-                ToTensor(),
-                normalize,
-            ])
+
+        transforms.extend([
+            CLAHE,
+            _convert_to_rgb,
+            ToTensor(),
+        ])
         return Compose(transforms)
