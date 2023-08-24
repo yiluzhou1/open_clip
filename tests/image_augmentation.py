@@ -14,11 +14,21 @@ Example:
 Suppose this file is located: '/home/username/Projects/Pytorch-Image-Models/tests/image_augmentation.py'
 image_size = (224, 224)
 
-You may import this file as follows:
+You may use this file as follows:
 
-sys.path.append('/home/username/Projects/Pytorch-Image-Models/tests/image_augmentation.py')
+sys.path.append('/home/username/Projects/Pytorch-Image-Models/tests/')
 from image_augmentation import customized_augmentation
+
 train_transform = customized_augmentation(image_size)
+original_img = Image.open(image_path).resize(image_size)
+augmented_img = train_transform(original_img)
+augmented_img = augmented_img.permute(1, 2, 0)  # Convert CxHxW to HxWxC for visualization
+
+# Concatenate and display images side by side
+concatenated_image = Image.new('RGB', (2 * original_img.width, original_img.height))
+concatenated_image.paste(original_img, (0, 0))
+concatenated_image.paste(augmented_img, (original_img.width, 0))
+concatenated_image.show()
 
 refs:
 https://www.kaggle.com/code/raddar/popular-x-ray-image-normalization-techniques
@@ -26,7 +36,7 @@ https://towardsdatascience.com/deep-learning-in-healthcare-x-ray-imaging-part-5-
 """
 
 # If you want to prevent the bottom line of image to be cropped, enter 'bottom'. Otherwise, leave empty string.
-crop_preservation = 'bottom' # 'bottom' or ''
+crop_preservation = '' # 'bottom' or ''
 
 class AlbumentationsTransform:
     def __init__(self, transform=None):
@@ -93,8 +103,7 @@ def invert_background(img):
     return img
 
 
-
-def customized_augmentation(image_size):
+def customized_augmentation(image_size, color_image=False):
     """
     Customize the augmentation pipeline as per your choice.    
     """
@@ -105,28 +114,61 @@ def customized_augmentation(image_size):
     
     def custom_random_resize_crop_preserve_bottom(img):
         """
-        TODO: Custom function for Random Crop that ensures the bottom line is preserved.
-        It first resizes the image to a randomly chosen size and then crops it to the desired size.
+        It first resizes the image to a randomly chosen size and then crops it to the original size.
         """
-        # Randomly choose a scale between 90% and 100%
-        scale_factor = random.uniform(0.9, 1.0)
+        # Open the original image
+        original_width, original_height = img.size
         
-        # Compute the crop dimensions based on the scale
-        crop_height = int(img.height * scale_factor)
-        crop_width = int(img.width * scale_factor)
+        # Calculate new dimensions
+        new_width = int(original_width * random.uniform(0.9, 1.1))
+        new_height = int(original_height * random.uniform(0.9, 1.1))
         
-        # Set the top left corner of the crop
-        top = img.height - crop_height
-        left = random.randint(0, img.width - crop_width)
+        # Resize the image
+        resized_image = img.resize((new_width, new_height), Image.BICUBIC)
         
-        img = img.crop((left, top, left + crop_width, img.height))
-        resized_img = img.resize(image_size, Image.BICUBIC)
-        return resized_img
+        # Randomly select the starting x-coordinate for cropping
+        max_x = max(0, new_width - original_width)
+        x_offset = random.randint(0, max_x)
+        
+        # Calculate the y-coordinate to ensure the bottom edge is preserved
+        y_offset = new_height - original_height
+        
+        # Crop the image (new_height guarantees that the bottom edge is preserved)
+        cropped_image = resized_image.crop((x_offset, y_offset, x_offset + original_width, new_height))
+        return cropped_image
     
+
+    def custom_random_padding_crop_preserve_bottom(img):
+        # Load the image
+        original_width, original_height = img.size
+        
+        # Determine padding values
+        left_padding = int(random.uniform(0, 0.1 * original_width))
+        right_padding = int(random.uniform(0, 0.1 * original_width))
+        top_padding = int(random.uniform(0, 0.1 * original_height))
+        bottom_padding = int(random.uniform(0, 0.1 * original_height))
+        
+        # Apply padding to the image
+        padded_image = ImageOps.expand(img, (left_padding, top_padding, right_padding, bottom_padding))
+        
+        # Calculate the cropping box while ensuring the bottom edge of the original image is kept
+        left = random.randint(0, left_padding+right_padding)
+        right = left + original_width
+        lower = random.randint(original_height+top_padding, original_height+top_padding+bottom_padding)
+        upper = lower - original_height
+
+        # Crop the image
+        cropped_image = padded_image.crop((left, upper, right, lower))
+        return cropped_image
+
+
     if crop_preservation == 'bottom':
         # need to preserve the bottom line
         customize_RandomResizedCrop = Compose([
             Lambda(custom_random_resize_crop_preserve_bottom),
+            ])
+        customize_RandomCrop = Compose([
+            Lambda(custom_random_padding_crop_preserve_bottom),
             ])
         max_vertical_translate = 0
         
@@ -138,6 +180,9 @@ def customized_augmentation(image_size):
             interpolation=InterpolationMode.BICUBIC,
         ),
         ])
+        customize_RandomCrop = Compose([
+            RandomCrop(size=image_size, padding=int(image_size[0]*0.1)),
+            ])
         max_vertical_translate = 0.1
     
     # Albumentations transformations
@@ -161,7 +206,7 @@ def customized_augmentation(image_size):
         RandomHorizontalFlip(p=0.5),
         ColorJitter(brightness=0.15, contrast=0.15),
         RandomAffine(degrees=0, translate=(0.1, max_vertical_translate)),
-        RandomCrop(size=image_size, padding=10), #TODO
+        customize_RandomCrop,
         # GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 2.0)),
     ])
 
@@ -176,12 +221,12 @@ def customized_augmentation(image_size):
 
     train_transform = Compose([
         AlbumentationsTransform2(clahe),
-        RandomAugmentation(0.2, Lambda(invert_background)), #20% images: background color will be inverted
-        RandomAugmentation(0.3, pre_rotation), # 30% images: RandomRotation
+        RandomAugmentation(0.1, Lambda(invert_background)), #10% images: background color will be inverted
+        RandomAugmentation(0.2, pre_rotation), # 20% images: RandomRotation
         pre_resize, # all images do resize
-        RandomAugmentation(0.25, customize_RandomResizedCrop), # 25% images will have be resized here
+        RandomAugmentation(0.2, customize_RandomResizedCrop), # 20% images will have be resized here
         # 0.3 means 30% of images will be augmented
-        RandomAugmentation(0.3, pre_transforms, AlbumentationsTransform(albu_transforms)),
+        RandomAugmentation(0.2, pre_transforms, AlbumentationsTransform(albu_transforms)),
         post_transforms
     ])
 

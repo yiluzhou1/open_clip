@@ -63,7 +63,7 @@ class AlbumentationsTransform2:
         return Image.fromarray(img)  # Convert back to PIL image
 
 # Define the CLAHE transformation
-clahe = A.CLAHE(p=1.0, clip_limit=4.0, tile_grid_size=(8, 8))
+clahe = A.CLAHE(p=1.0, clip_limit=6.0, tile_grid_size=(12, 12))
 CLAHE = AlbumentationsTransform2(clahe) # normalizing using Adaptive Histogram Equalization (CLAHE)
 
 
@@ -77,6 +77,7 @@ def image_transform(
         mean: Optional[Tuple[float, ...]] = None,
         std: Optional[Tuple[float, ...]] = None,
         resize_longest_max: bool = False,
+        color_image: bool = False, # For grayscale images by default
         fill_color: int = 0,
         aug_cfg: Optional[Union[Dict[str, Any], AugmentationCfg]] = None,
         augment_dir: Optional[str] = None,
@@ -102,6 +103,7 @@ def image_transform(
         aug_cfg_dict = {k: v for k, v in asdict(aug_cfg).items() if v is not None}
         use_timm = aug_cfg_dict.pop('use_timm', False)
         augment_dir = aug_cfg_dict.pop('augment_dir', None)
+        color_image = aug_cfg_dict.pop('color_image', False)
         if use_timm:
             from timm.data import create_transform  # timm can still be optional
             if isinstance(image_size, (tuple, list)):
@@ -126,7 +128,7 @@ def image_transform(
                 raise ValueError(f'In folder augment_dir ({augment_dir}), there must contain image_augmentation.py')
             sys.path.append(augment_dir)
             from image_augmentation import customized_augmentation
-            train_transform = customized_augmentation(image_size)
+            train_transform = customized_augmentation(image_size, color_image)
         else:
             train_transform = Compose([
                 RandomResizedCrop(
