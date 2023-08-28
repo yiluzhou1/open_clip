@@ -25,6 +25,7 @@ class AugmentationCfg:
     re_count: Optional[int] = None
     use_timm: bool = False
     augment_dir: Optional[str] = None
+    color_image: bool = False
 
 
 class ResizeMaxSize(nn.Module):
@@ -155,8 +156,9 @@ def image_transform(
             ]
 
         transforms.extend([
-            CLAHE,
             _convert_to_rgb,
+            CLAHE,
             ToTensor(),
+            normalize,
         ])
         return Compose(transforms)
