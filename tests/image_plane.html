@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Plane Classification</title>
+</head>
+<body>
+    <h1>Upload an Image</h1>
+    <form action="/image_plane" method="post" enctype="multipart/form-data">
+        <input type="file" name="localfile">
+        <input type="submit" value="Start detecting...">
+    </form>
+    {% if classification %}
+    <h2>Classification result: {{ classification }}</h2>
+    {% endif %}
+    {% if image_path %}
+    <img src="{{ image_path }}" alt="Uploaded Image" width="300">
+    {% endif %}
+</body>
+</html>
+
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Image for Plane Detection</title>
+</head>
+<body>
+    <h3>Upload Image for Plane Detection:</h3>
+    <form action="/image_plane" method="post" enctype="multipart/form-data">
+        <input type="file" name="localfile">
+        <input type="submit" value="Detect plane...">
+    </form>
+</body>
+</html>
+ -->

@@ -3,8 +3,8 @@
 # netstat -tuln | grep 8001
 # lsof -i :8001
 from fastapi.logger import logger as fastapi_logger
-from fastapi import FastAPI, HTTPException, Depends, Request, Form, UploadFile, File
-from typing import Optional
+from fastapi import FastAPI, Request
+from fastapi.responses import PlainTextResponse, HTMLResponse, FileResponse
 
 from PIL import Image
 import os, torch, open_clip, logging, pydicom, io
@@ -52,6 +52,13 @@ def classify_image_plane (img, sentences):
     return class_predict
 
 
+def return_source(source, text):
+    if source == 'curl':
+        return {"image_plane": text}
+    else:
+        return HTMLResponse(f"<h2>image_plane: {text}</h2>")
+    
+
 @app.get("/image_plane")
 async def image_plane(filepath: str):
     fastapi_logger.info(f"Received GET request for image path: {filepath}")
@@ -95,15 +102,24 @@ async def image_plane(request: Request):
     
     curl -X POST "http://10.10.232.240:8001/image_plane" -F "localfile=@C:/Users/yzhou/OneDrive - Globus Medical/Desktop/test.dcm"
     """
+    # Extract the User-Agent and determine the source of the request
+    user_agent = request.headers.get("User-Agent", "")
+    
+    if "curl" in user_agent:
+        # The request was made by curl
+        source = "curl"
+    else:
+        # The request was made by a web browser or another client
+        source = f"a client using web browser: {user_agent}"
     
     # Classify the image_plane
     sentences = ["anteroposterior", "lateral"]
     
     # Check for form data (i.e., uploaded file)
     form_data = await request.form()
-    localfile = form_data.get("localfile")  # Assuming "file" is the key for the uploaded file
+    localfile = form_data.get("localfile")
     if localfile:
-        fastapi_logger.info(f"Received POST request for a local file {localfile}")
+        fastapi_logger.info(f"Received POST request (made by {source}) for a local file {localfile}")
         # It's a file from client's computer
         file_contents = await localfile.read()
         filepath = io.BytesIO(file_contents)
@@ -118,18 +134,18 @@ async def image_plane(request: Request):
                 with filepath as f:
                     img = Image.open(f).convert('RGB')
             except Exception as e:
-                return {"image_plane": f"Invalid image format: {e}"}
+                return return_source(source, f"Invalid image format: {e}") #{"image_plane": f"Invalid image format: {e}"}
     else:
         try:
             json_data = await request.json()
             filepath = json_data.get("filepath")
         except Exception as e:
-            return {"image_plane": f"Invalid JSON format: {e}"}
+            return return_source(source, f"Invalid JSON format: {e}")
         
         if not filepath:
-            return {"image_plane": "ERROR: Filepath not provided"}
+            return return_source(source, "ERROR: Filepath not provided")
         if not os.path.exists(filepath):
-            return {"image_plane": "ERROR: File not exist"}
+            return return_source(source, "ERROR: File not exist")
 
         fastapi_logger.info(f"Received POST request for image path: {filepath}")
         try:
@@ -142,13 +158,17 @@ async def image_plane(request: Request):
             try:
                 img = Image.open(filepath).convert('RGB')
             except Exception as e:
-                return {"image_plane": f"Invalid image format: {e}"}
+                return return_source(source, f"Invalid image format: {e}")
 
     try:
         classification = classify_image_plane(img=img, sentences=sentences)
         fastapi_logger.info(f"Classification result: {classification}")
-        return {"image_plane": classification}
+        return return_source(source, classification)
     except Exception as e:
         fastapi_logger.error(f"Error classifying image {filepath}: {e}")
-        return {"image_plane": f"Error in classifying image {filepath}: {e}"}
+        return return_source(source, f"Error in classifying image {filepath}: {e}")
 
+
+@app.get("/")
+def read_root():
+    return FileResponse("image_plane.html")
