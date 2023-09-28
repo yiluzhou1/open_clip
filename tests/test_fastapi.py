@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 from PIL import Image
+import numpy as np
 import os, torch, open_clip, logging, pydicom, io
 
 # Load deep learning model
@@ -81,7 +82,13 @@ async def image_plane(filepath: str):
 
     try:
         dicom_image = pydicom.dcmread(filepath)
-        img = Image.fromarray(dicom_image.pixel_array)
+        image_data = dicom_image.pixel_array
+        
+        # Convert image data to 8-bit pixels
+        image_data = (np.maximum(image_data, 0) / image_data.max()) * 255.0
+        image_data = np.uint8(image_data)
+        
+        img = Image.fromarray(image_data)
         if img.mode not in ['L', 'RGB']:
             img = img.convert('L').convert('RGB')
     except:
@@ -131,7 +138,13 @@ async def image_plane(request: Request):
         filepath = io.BytesIO(file_contents)
         try:
             dicom_image = pydicom.dcmread(filepath)
-            img = Image.fromarray(dicom_image.pixel_array)
+            image_data = dicom_image.pixel_array
+            
+            # Convert image data to 8-bit pixels
+            image_data = (np.maximum(image_data, 0) / image_data.max()) * 255.0
+            image_data = np.uint8(image_data)
+            
+            img = Image.fromarray(image_data)            
             if img.mode not in ['L', 'RGB']:
                 img = img.convert('L').convert('RGB')
         except:
@@ -171,6 +184,13 @@ async def image_plane(request: Request):
         fastapi_logger.info(f"Classification result: {classification}")
         
         if source != 'curl':
+            width, height = img.size
+            max_width = 600
+            if width > max_width:
+                # Calculate the new height to maintain the aspect ratio
+                new_height = int((max_width / width) * height)
+                # Resize the image
+                img = img.resize((max_width, new_height), Image.ANTIALIAS)
             temp_image_path = f"static/test.png"
             img.save(temp_image_path)
             # Render the HTML template with results and image
