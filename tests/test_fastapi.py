@@ -5,6 +5,8 @@
 from fastapi.logger import logger as fastapi_logger
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse, HTMLResponse, FileResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 from PIL import Image
 import os, torch, open_clip, logging, pydicom, io
@@ -29,7 +31,11 @@ fastapi_logger.addHandler(logging.StreamHandler())
 pretrained_model = '/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip_GlobusSrgMapData_crop_square/2023_08_28-10_39_59-model_coca_ViT-L-14-lr_5e-06-b_32-j_4-p_amp/checkpoints/epoch_24.pt'
 model, tokenizer, preprocess = load_classify_model(pretrained_model=pretrained_model)
 
+# create FastAPI app
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory=".")
+
 
 def classify_image_plane (img, sentences):
     """
@@ -82,15 +88,15 @@ async def image_plane(filepath: str):
         try:
             img = Image.open(filepath).convert('RGB')
         except Exception as e:
-            return {"image_plane": f"Invalid image format: {e}"}
+            return {"image_plane": f"ERROR: Invalid image format: {e}"}
     
     try:
         classification = classify_image_plane(img=img, sentences=sentences)
         fastapi_logger.info(f"Classification result: {classification}")
         return {"image_plane": classification}
     except Exception as e:
-        fastapi_logger.error(f"Error classifying image {filepath}: {e}")
-        return {"image_plane": f"Error classifying image {filepath}: {e}"}
+        fastapi_logger.error(f"ERROR in classifying image {filepath}: {e}")
+        return {"image_plane": f"ERROR in classifying image {filepath}: {e}"}
 
 
 @app.post("/image_plane")
@@ -134,13 +140,13 @@ async def image_plane(request: Request):
                 with filepath as f:
                     img = Image.open(f).convert('RGB')
             except Exception as e:
-                return return_source(source, f"Invalid image format: {e}") #{"image_plane": f"Invalid image format: {e}"}
+                return return_source(source, f"ERROR: Invalid image format: {e}") #{"image_plane": f"Invalid image format: {e}"}
     else:
         try:
             json_data = await request.json()
             filepath = json_data.get("filepath")
         except Exception as e:
-            return return_source(source, f"Invalid JSON format: {e}")
+            return return_source(source, f"ERROR: Invalid JSON format: {e}")
         
         if not filepath:
             return return_source(source, "ERROR: Filepath not provided")
@@ -158,17 +164,28 @@ async def image_plane(request: Request):
             try:
                 img = Image.open(filepath).convert('RGB')
             except Exception as e:
-                return return_source(source, f"Invalid image format: {e}")
+                return return_source(source, f"ERROR: Invalid image format: {e}")
 
     try:
         classification = classify_image_plane(img=img, sentences=sentences)
         fastapi_logger.info(f"Classification result: {classification}")
-        return return_source(source, classification)
+        
+        if source != 'curl':
+            temp_image_path = f"static/test.png"
+            img.save(temp_image_path)
+            # Render the HTML template with results and image
+            return templates.TemplateResponse("image_plane.html", {
+                "request": request,
+                "classification": classification,
+                "image_path": temp_image_path,
+            })
+        else:
+            return return_source(source, classification)
     except Exception as e:
-        fastapi_logger.error(f"Error classifying image {filepath}: {e}")
-        return return_source(source, f"Error in classifying image {filepath}: {e}")
+        fastapi_logger.error(f"ERROR in classifying image {filepath}: {e}")
+        return return_source(source, f"ERROR in classifying image {filepath}: {e}")
 
 
 @app.get("/")
-def read_root():
-    return FileResponse("image_plane.html")
+async def read_template(request: Request):
+    return templates.TemplateResponse("image_plane.html", {"request": request, "classification": None, "image_path": None})

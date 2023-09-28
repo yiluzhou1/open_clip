@@ -10,7 +10,7 @@
         <input type="submit" value="Start detecting...">
     </form>
     {% if classification %}
-    <h2>Classification result: {{ classification }}</h2>
+    <h2>Image plane: {{ classification }}</h2>
     {% endif %}
     {% if image_path %}
     <img src="{{ image_path }}" alt="Uploaded Image" width="300">
