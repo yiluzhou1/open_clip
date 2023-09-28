@@ -2,11 +2,10 @@
 # uvicorn test_fastapi:app --host 0.0.0.0 --port 8000 --reload
 # netstat -tuln | grep 8000
 # lsof -i :8000
-
-
+from fastapi.logger import logger as fastapi_logger
 from fastapi import FastAPI, HTTPException
 from PIL import Image
-import json, os, torch, open_clip
+import json, os, torch, open_clip, logging
 
 # Load deep learning model
 def load_classify_model(pretrained_model):
@@ -19,6 +18,12 @@ def load_classify_model(pretrained_model):
     tokenizer = open_clip.get_tokenizer('coca_ViT-L-14')
     return model, tokenizer, preprocess
 
+# set up log settings
+log_format = "%(asctime)s - %(levelname)s - %(message)s"
+logging.basicConfig(level=logging.INFO, filename="fastapi.log", format=log_format)
+fastapi_logger.addHandler(logging.StreamHandler())
+
+# load model
 pretrained_model = '/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip_GlobusSrgMapData_crop_square/2023_08_28-10_39_59-model_coca_ViT-L-14-lr_5e-06-b_32-j_4-p_amp/checkpoints/epoch_24.pt'
 model, tokenizer, preprocess = load_classify_model(pretrained_model=pretrained_model)
 
@@ -58,13 +63,19 @@ def classify_image_plane (image_path, sentences):
 
 @app.get("/image_plane")
 async def image_plane(filepath: str):
+    fastapi_logger.info(f"Received GET request for image path: {filepath}")
     # On web browser
     # http://127.0.0.1:8001/image_plane?filepath=/path/to/image.jpg
     # http://10.10.232.240:8001/image_plane?filepath=/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg
     # Classify the image_plane
     sentences = ["anteroposterior", "lateral"]
-    classification = classify_image_plane(filepath, sentences)
-    return {"image_plane": classification}
+    try:
+        classification = classify_image_plane(filepath, sentences)
+        fastapi_logger.info(f"Classification result: {classification}")
+        return {"image_plane": classification}
+    except Exception as e:
+        fastapi_logger.error(f"Error classifying image {filepath}: {e}")
+        return {"image_plane": f"Error classifying image {filepath}: {e}"}
 
 
 @app.post("/image_plane")
@@ -73,13 +84,16 @@ async def image_plane(request: dict):
     # curl -X POST "http://127.0.0.1:8001/image_plane" -H "Content-Type: application/json" -d "{\"filepath\":\"/path/to/image.jpg\"}"
     # curl -X POST "http://10.10.232.240:8001/image_plane" -H "Content-Type: application/json" -d "{\"filepath\":\"/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg\"}"
     filepath = request.get("filepath")
-    if not filepath:
-        raise HTTPException(status_code=400, detail="Filepath not provided")
+    fastapi_logger.info(f"Received POST request for image path: {filepath}")
 
     # Classify the image_plane
     sentences = ["anteroposterior", "lateral"]
-    classification = classify_image_plane(filepath, sentences)
-
-    # Return the classification
-    return {"image_plane": classification}
+    
+    try:
+        classification = classify_image_plane(filepath, sentences)
+        fastapi_logger.info(f"Classification result: {classification}")
+        return {"image_plane": classification}
+    except Exception as e:
+        fastapi_logger.error(f"Error classifying image {filepath}: {e}")
+        return {"image_plane": f"Error classifying image {filepath}: {e}"}
 
