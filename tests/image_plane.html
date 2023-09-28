@@ -4,6 +4,33 @@
     <title>Image Plane Classification</title>
 </head>
 <body>
+    <h1>Upload an image for plane detection</h1>
+    <form action="/image_plane" method="post" enctype="multipart/form-data" id="uploadForm">
+        <input type="file" name="localfile" id="fileInput">
+        <!-- <input type="submit" value="Start detecting..."> -->
+    </form>
+    {% if classification %}
+    <h2>Image plane: {{ classification }}</h2>
+    {% endif %}
+    {% if image_path %}
+    <img src="{{ image_path }}" alt="Uploaded Image" width="300">
+    {% endif %}
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function() {
+            // When a file is selected, submit the form
+            document.getElementById('uploadForm').submit();
+        });
+    </script>
+</body>
+</html>
+
+
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <title>Image Plane Classification</title>
+</head>
+<body>
     <h1>Upload an Image</h1>
     <form action="/image_plane" method="post" enctype="multipart/form-data">
         <input type="file" name="localfile">
@@ -16,19 +43,4 @@
     <img src="{{ image_path }}" alt="Uploaded Image" width="300">
     {% endif %}
 </body>
-</html>
-
-<!-- <!DOCTYPE html>
-<html>
-<head>
-    <title>Upload Image for Plane Detection</title>
-</head>
-<body>
-    <h3>Upload Image for Plane Detection:</h3>
-    <form action="/image_plane" method="post" enctype="multipart/form-data">
-        <input type="file" name="localfile">
-        <input type="submit" value="Detect plane...">
-    </form>
-</body>
-</html>
- -->
+</html> -->
