@@ -1,11 +1,13 @@
 # pip install fastapi[all] uvicorn tensorflow
-# uvicorn test_fastapi:app --host 0.0.0.0 --port 8000 --reload
-# netstat -tuln | grep 8000
-# lsof -i :8000
+# uvicorn test_fastapi:app --host 0.0.0.0 --port 8001 --reload
+# netstat -tuln | grep 8001
+# lsof -i :8001
 from fastapi.logger import logger as fastapi_logger
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Request, Form, UploadFile, File
+from typing import Optional
+
 from PIL import Image
-import json, os, torch, open_clip, logging
+import os, torch, open_clip, logging, pydicom, io
 
 # Load deep learning model
 def load_classify_model(pretrained_model):
@@ -29,21 +31,10 @@ model, tokenizer, preprocess = load_classify_model(pretrained_model=pretrained_m
 
 app = FastAPI()
 
-def classify_image_plane (image_path, sentences):
+def classify_image_plane (img, sentences):
     """
     Function for image plan classification.
     """
-    if not image_path:
-        return "ERROR: Filepath not provided"
-    #file not exist
-    if not os.path.exists(image_path):
-        return "ERROR: File not exist"
-
-    # load an image
-    try:
-        img = Image.open(image_path).convert('RGB')
-    except:
-        return None #skip if image is not readable
     img = img.resize((224, 224), Image.Resampling.LANCZOS)
     image = preprocess(img).unsqueeze(0)
     text = tokenizer(sentences)
@@ -69,8 +60,25 @@ async def image_plane(filepath: str):
     # http://10.10.232.240:8001/image_plane?filepath=/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg
     # Classify the image_plane
     sentences = ["anteroposterior", "lateral"]
+    
+    if not filepath:
+        return {"image_plane": "ERROR: Filepath not provided"}
+    if not os.path.exists(filepath):
+        return {"image_plane": "ERROR: File not exist"}
+
     try:
-        classification = classify_image_plane(filepath, sentences)
+        dicom_image = pydicom.dcmread(filepath)
+        img = Image.fromarray(dicom_image.pixel_array)
+        if img.mode not in ['L', 'RGB']:
+            img = img.convert('L').convert('RGB')
+    except:
+        try:
+            img = Image.open(filepath).convert('RGB')
+        except Exception as e:
+            return {"image_plane": f"Invalid image format: {e}"}
+    
+    try:
+        classification = classify_image_plane(img=img, sentences=sentences)
         fastapi_logger.info(f"Classification result: {classification}")
         return {"image_plane": classification}
     except Exception as e:
@@ -79,21 +87,68 @@ async def image_plane(filepath: str):
 
 
 @app.post("/image_plane")
-async def image_plane(request: dict):
+async def image_plane(request: Request):
     # On command line
     # curl -X POST "http://127.0.0.1:8001/image_plane" -H "Content-Type: application/json" -d "{\"filepath\":\"/path/to/image.jpg\"}"
-    # curl -X POST "http://10.10.232.240:8001/image_plane" -H "Content-Type: application/json" -d "{\"filepath\":\"/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg\"}"
-    filepath = request.get("filepath")
-    fastapi_logger.info(f"Received POST request for image path: {filepath}")
-
+    """
+    curl -X POST "http://10.10.232.240:8001/image_plane" -H "Content-Type: application/json" -d "{\"filepath\":\"/mnt/eds_share/share/Totalsegmentator_dataset/segmentation_for_sahana/DDR/projection/20230906/Mir_Pre-OP_CT_2022-07-22T124202_1.1_0_2_anon_Unknown_Lat_projection_enhance1.dcm\"}"
+    
+    curl -X POST "http://10.10.232.240:8001/image_plane" -F "localfile=@C:/Users/yzhou/OneDrive - Globus Medical/Desktop/test.dcm"
+    """
+    
     # Classify the image_plane
     sentences = ["anteroposterior", "lateral"]
     
+    # Check for form data (i.e., uploaded file)
+    form_data = await request.form()
+    localfile = form_data.get("localfile")  # Assuming "file" is the key for the uploaded file
+    if localfile:
+        fastapi_logger.info(f"Received POST request for a local file {localfile}")
+        # It's a file from client's computer
+        file_contents = await localfile.read()
+        filepath = io.BytesIO(file_contents)
+        try:
+            dicom_image = pydicom.dcmread(filepath)
+            img = Image.fromarray(dicom_image.pixel_array)
+            if img.mode not in ['L', 'RGB']:
+                img = img.convert('L').convert('RGB')
+        except:
+            # If it's not a DICOM file, try reading it as a regular image
+            try:
+                with filepath as f:
+                    img = Image.open(f).convert('RGB')
+            except Exception as e:
+                return {"image_plane": f"Invalid image format: {e}"}
+    else:
+        try:
+            json_data = await request.json()
+            filepath = json_data.get("filepath")
+        except Exception as e:
+            return {"image_plane": f"Invalid JSON format: {e}"}
+        
+        if not filepath:
+            return {"image_plane": "ERROR: Filepath not provided"}
+        if not os.path.exists(filepath):
+            return {"image_plane": "ERROR: File not exist"}
+
+        fastapi_logger.info(f"Received POST request for image path: {filepath}")
+        try:
+            # Load the DICOM file using pydicom
+            dicom_image = pydicom.dcmread(filepath)
+            img = Image.fromarray(dicom_image.pixel_array)
+            if img.mode not in ['L', 'RGB']:
+                img = img.convert('L').convert('RGB')
+        except:
+            try:
+                img = Image.open(filepath).convert('RGB')
+            except Exception as e:
+                return {"image_plane": f"Invalid image format: {e}"}
+
     try:
-        classification = classify_image_plane(filepath, sentences)
+        classification = classify_image_plane(img=img, sentences=sentences)
         fastapi_logger.info(f"Classification result: {classification}")
         return {"image_plane": classification}
     except Exception as e:
         fastapi_logger.error(f"Error classifying image {filepath}: {e}")
-        return {"image_plane": f"Error classifying image {filepath}: {e}"}
+        return {"image_plane": f"Error in classifying image {filepath}: {e}"}
 
