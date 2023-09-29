@@ -60,29 +60,22 @@ def classify_image_plane (img, sentences):
 
 
 def return_source(source, text):
-    if source == 'curl':
+    if source in ['curl', 'GET']:
         return {"image_plane": text}
     else:
         return HTMLResponse(f"<h2>image_plane: {text}</h2>")
-    
 
-@app.get("/image_plane")
-async def image_plane(filepath: str):
-    fastapi_logger.info(f"Received GET request for image path: {filepath}")
-    # On web browser
-    # http://127.0.0.1:8001/image_plane?filepath=/path/to/image.jpg
-    # http://10.10.232.240:8001/image_plane?filepath=/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg
-    # Classify the image_plane
-    sentences = ["anteroposterior", "lateral"]
-    
-    if not filepath:
-        return {"image_plane": "ERROR: Filepath not provided"}
-    if not os.path.exists(filepath):
-        return {"image_plane": "ERROR: File not exist"}
 
+def load_image(filepath, source):
     try:
-        dicom_image = pydicom.dcmread(filepath)
+        dicom_image = pydicom.dcmread(filepath, force=True)
+        # Set the TransferSyntaxUID if it's missing
+        if not hasattr(dicom_image.file_meta, 'TransferSyntaxUID'):
+            dicom_image.file_meta.TransferSyntaxUID = pydicom.uid.ExplicitVRLittleEndian        
         image_data = dicom_image.pixel_array
+        
+        if len(image_data.shape) != 2:
+            return return_source(source, "ERROR: This DICOM file is not a 2D image")
         
         # Convert image data to 8-bit pixels
         image_data = (np.maximum(image_data, 0) / image_data.max()) * 255.0
@@ -95,15 +88,36 @@ async def image_plane(filepath: str):
         try:
             img = Image.open(filepath).convert('RGB')
         except Exception as e:
-            return {"image_plane": f"ERROR: Invalid image format: {e}"}
+            img = return_source(source, f"ERROR: Invalid image format: {e}")
+    return img
+    
+
+@app.get("/image_plane")
+async def image_plane(filepath: str):
+    fastapi_logger.info(f"Received GET request for image path: {filepath}")
+    source = 'GET'
+    # On web browser
+    # http://127.0.0.1:8001/image_plane?filepath=/path/to/image.jpg
+    # http://10.10.232.240:8001/image_plane?filepath=/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg
+    # Classify the image_plane
+    sentences = ["anteroposterior", "lateral"]
+    
+    if not filepath:
+        return return_source(source, "ERROR: Filepath not provided")
+    if not os.path.exists(filepath):
+        return return_source(source, "ERROR: File not exist")
+
+    img = load_image(filepath, source)
+    if not isinstance(img, Image.Image):
+        return img
     
     try:
         classification = classify_image_plane(img=img, sentences=sentences)
         fastapi_logger.info(f"Classification result: {classification}")
-        return {"image_plane": classification}
+        return return_source(source, classification)
     except Exception as e:
         fastapi_logger.error(f"ERROR in classifying image {filepath}: {e}")
-        return {"image_plane": f"ERROR in classifying image {filepath}: {e}"}
+        return return_source(source, f"ERROR in classifying image {filepath}: {e}")
 
 
 @app.post("/image_plane")
@@ -136,24 +150,10 @@ async def image_plane(request: Request):
         # It's a file from client's computer
         file_contents = await localfile.read()
         filepath = io.BytesIO(file_contents)
-        try:
-            dicom_image = pydicom.dcmread(filepath)
-            image_data = dicom_image.pixel_array
-            
-            # Convert image data to 8-bit pixels
-            image_data = (np.maximum(image_data, 0) / image_data.max()) * 255.0
-            image_data = np.uint8(image_data)
-            
-            img = Image.fromarray(image_data)            
-            if img.mode not in ['L', 'RGB']:
-                img = img.convert('L').convert('RGB')
-        except:
-            # If it's not a DICOM file, try reading it as a regular image
-            try:
-                with filepath as f:
-                    img = Image.open(f).convert('RGB')
-            except Exception as e:
-                return return_source(source, f"ERROR: Invalid image format: {e}") #{"image_plane": f"Invalid image format: {e}"}
+        
+        img = load_image(filepath, source)
+        if not isinstance(img, Image.Image):
+            return img        
     else:
         try:
             json_data = await request.json()
@@ -167,17 +167,9 @@ async def image_plane(request: Request):
             return return_source(source, "ERROR: File not exist")
 
         fastapi_logger.info(f"Received POST request for image path: {filepath}")
-        try:
-            # Load the DICOM file using pydicom
-            dicom_image = pydicom.dcmread(filepath)
-            img = Image.fromarray(dicom_image.pixel_array)
-            if img.mode not in ['L', 'RGB']:
-                img = img.convert('L').convert('RGB')
-        except:
-            try:
-                img = Image.open(filepath).convert('RGB')
-            except Exception as e:
-                return return_source(source, f"ERROR: Invalid image format: {e}")
+        img = load_image(filepath, source)
+        if not isinstance(img, Image.Image):
+            return img
 
     try:
         classification = classify_image_plane(img=img, sentences=sentences)
@@ -190,7 +182,7 @@ async def image_plane(request: Request):
                 # Calculate the new height to maintain the aspect ratio
                 new_height = int((max_width / width) * height)
                 # Resize the image
-                img = img.resize((max_width, new_height), Image.ANTIALIAS)
+                img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
             temp_image_path = f"static/test.png"
             img.save(temp_image_path)
             # Render the HTML template with results and image

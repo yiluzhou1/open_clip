@@ -5,6 +5,7 @@ features/
 results/
 
 tests/data/
+tests/static/
 GlobusSrgMapData_full_body/
 tests/roco-data/
 Body_Parts_XRay/
