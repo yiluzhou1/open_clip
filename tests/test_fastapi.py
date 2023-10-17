@@ -1,5 +1,6 @@
 # pip install fastapi[all] uvicorn tensorflow
 # uvicorn test_fastapi:app --host 0.0.0.0 --port 8001 --reload
+# nohup uvicorn test_fastapi:app --host 0.0.0.0 --port 8001 --reload > output.log 2>&1 &
 # netstat -tuln | grep 8001
 # lsof -i :8001
 from fastapi.logger import logger as fastapi_logger
@@ -11,6 +12,26 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 import numpy as np
 import os, torch, open_clip, logging, pydicom, io
+
+
+"""
+If you are using the images on EDS remote server, e.g.: 
+/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg
+2 ways for plane detection:
+(1) In your web browser, enter
+    http://10.10.232.240:8001/image_plane?filepath=/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg
+(2) In your command prompt or terminal, enter
+    curl -X POST "http://10.10.232.240:8001/image_plane" -H "Content-Type: application/json" -d "{\"filepath\":\"/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg\"}"
+
+If you are uploading image for plane detection, e.g.: C:/Users/yzhou/OneDrive - Globus Medical/Desktop/test.dcm
+2 ways for plane detection:
+(1) In your web browser, upload your images for plane detection
+    http://eds:8001/
+(2) In your command prompt or terminal, enter
+    curl -X POST "http://10.10.232.240:8001/image_plane" -F "localfile=@C:/Users/yzhou/OneDrive - Globus Medical/Desktop/test.dcm"
+
+"""
+
 
 # Load deep learning model
 def load_classify_model(pretrained_model):
