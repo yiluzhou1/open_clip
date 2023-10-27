@@ -26,7 +26,7 @@ If you are using the images on EDS remote server, e.g.:
 If you are uploading image for plane detection, e.g.: C:/Users/yzhou/OneDrive - Globus Medical/Desktop/test.dcm
 2 ways for plane detection:
 (1) In your web browser, upload your images for plane detection
-    http://eds:8001/
+    http://10.10.232.240:8001/
 (2) In your command prompt or terminal, enter
     curl -X POST "http://10.10.232.240:8001/image_plane" -F "localfile=@C:/Users/yzhou/OneDrive - Globus Medical/Desktop/test.dcm"
 
@@ -50,7 +50,8 @@ logging.basicConfig(level=logging.INFO, filename="fastapi.log", format=log_forma
 fastapi_logger.addHandler(logging.StreamHandler())
 
 # load model
-pretrained_model = '/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip_GlobusSrgMapData_crop_square/2023_08_28-10_39_59-model_coca_ViT-L-14-lr_5e-06-b_32-j_4-p_amp/checkpoints/epoch_24.pt'
+# pretrained_model = '/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip_GlobusSrgMapData_crop_square/2023_08_28-10_39_59-model_coca_ViT-L-14-lr_5e-06-b_32-j_4-p_amp/checkpoints/epoch_24.pt'
+pretrained_model = '/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip_GlobusSrgMapData_crop_square/2023_08_14-13_20_56-model_coca_ViT-L-14-lr_1e-06-b_32-j_4-p_amp/checkpoints/epoch_22.pt'
 model, tokenizer, preprocess = load_classify_model(pretrained_model=pretrained_model)
 
 # create FastAPI app
@@ -84,7 +85,7 @@ def return_source(source, text):
     if source in ['curl', 'GET']:
         return {"image_plane": text}
     else:
-        return HTMLResponse(f"<h2>image_plane: {text}</h2>")
+        return HTMLResponse(f"<h2>image classification: {text}</h2>")
 
 
 def load_image(filepath, source):
@@ -161,7 +162,8 @@ async def image_plane(request: Request):
         source = f"a client using web browser: {user_agent}"
     
     # Classify the image_plane
-    sentences = ["anteroposterior", "lateral"]
+    sentences_plane = ["anteroposterior", "lateral"]
+    sentences_anatomy = ['thoracic only', 'lumbar only', 'thoracic and lumbar']
     
     # Check for form data (i.e., uploaded file)
     form_data = await request.form()
@@ -193,7 +195,12 @@ async def image_plane(request: Request):
             return img
 
     try:
-        classification = classify_image_plane(img=img, sentences=sentences)
+        image_plane = classify_image_plane(img=img, sentences=sentences_plane)
+        image_anatomy = classify_image_plane(img=img, sentences=sentences_anatomy)
+        classification = {
+            "image_plane": image_plane,
+            "image_anatomy": image_anatomy,
+        }
         fastapi_logger.info(f"Classification result: {classification}")
         
         if source != 'curl':
