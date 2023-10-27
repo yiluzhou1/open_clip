@@ -57,5 +57,5 @@ setup(
     extras_require={
         "training": TRAINING_REQUIREMENTS,
     },
-    python_requires='>=3.7',
+    python_requires='>=3.10',
 )

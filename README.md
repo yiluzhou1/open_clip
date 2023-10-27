@@ -119,6 +119,17 @@ pip install -U pip
 
 You can then install openclip for training with `pip install 'open_clip_torch[training]'`.
 
+You can also use anaconda to create a virtual environment:
+```
+conda create --name openclip python=3.11
+conda activate openclip
+pip install -U pip
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install regex ftfy tqdm huggingface_hub sentencepiece protobuf timm tensorboard transformers fastapi pydicom webdataset pandas fsspec uvicorn
+pip install albumentations python-multipart nibabel SimpleITK matplotlib py7zr rarfile
+pip install .
+```
+
 #### Development
 
 If you want to make changes to contribute code, you can close openclip then run `make install` in openclip folder (after creating a virtualenv)
