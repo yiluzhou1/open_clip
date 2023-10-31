@@ -50,12 +50,13 @@ logging.basicConfig(level=logging.INFO, filename="fastapi.log", format=log_forma
 fastapi_logger.addHandler(logging.StreamHandler())
 
 # load model
-# pretrained_model = '/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip_GlobusSrgMapData_crop_square/2023_08_28-10_39_59-model_coca_ViT-L-14-lr_5e-06-b_32-j_4-p_amp/checkpoints/epoch_24.pt'
-pretrained_model = '/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip_GlobusSrgMapData_crop_square/2023_08_14-13_20_56-model_coca_ViT-L-14-lr_1e-06-b_32-j_4-p_amp/checkpoints/epoch_22.pt'
+pretrained_model = 'C:/Development/open_clip/checkpoints/epoch_22.pt'
 model, tokenizer, preprocess = load_classify_model(pretrained_model=pretrained_model)
 
 # create FastAPI app
 app = FastAPI()
+if not os.path.exists('static'):
+    os.makedirs('static')
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory=".")
 
