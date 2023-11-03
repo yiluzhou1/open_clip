@@ -97,7 +97,7 @@ def classify_image_plane (img, sentences):
 
 def return_source(source, text):
     if source in ['curl', 'GET']:
-        return {"image_plane": text}
+        return {"image_classification": text}
     else:
         return HTMLResponse(f"<h2>image classification: {text}</h2>")
 
