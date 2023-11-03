@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from PIL import Image
 import numpy as np
-import os, torch, open_clip, logging, pydicom, io
+import os, torch, open_clip, logging, pydicom, io, sys
 
 
 """
@@ -53,12 +53,25 @@ fastapi_logger.addHandler(logging.StreamHandler())
 pretrained_model = 'C:/Development/open_clip/checkpoints/epoch_22.pt'
 model, tokenizer, preprocess = load_classify_model(pretrained_model=pretrained_model)
 
+# Adjust path based on whether the application is bundled or run as a script
+if getattr(sys, 'frozen', False):
+    # The application is bundled (frozen)
+    base_dir = sys._MEIPASS
+else:
+    # The application is run from a script
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Set the paths for static files and templates
+static_dir = os.path.join(base_dir, 'static')
+#if static_dir doesn't exist, create it
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+template_dir = base_dir
+
 # create FastAPI app
 app = FastAPI()
-if not os.path.exists('static'):
-    os.makedirs('static')
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory=".")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+templates = Jinja2Templates(directory=template_dir)
 
 
 def classify_image_plane (img, sentences):
