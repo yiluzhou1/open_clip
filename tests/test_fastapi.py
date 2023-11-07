@@ -50,7 +50,7 @@ logging.basicConfig(level=logging.INFO, filename="fastapi.log", format=log_forma
 fastapi_logger.addHandler(logging.StreamHandler())
 
 # load model
-pretrained_model = 'C:/Development/open_clip/checkpoints/epoch_22.pt'
+pretrained_model = '/mnt/eds_share/Users/yilu.zhou/Development/log/open_clip_GlobusSrgMapData_crop_square/2023_08_14-13_20_56-model_coca_ViT-L-14-lr_1e-06-b_32-j_4-p_amp/checkpoints/epoch_22.pt'
 model, tokenizer, preprocess = load_classify_model(pretrained_model=pretrained_model)
 
 # Adjust path based on whether the application is bundled or run as a script
@@ -136,7 +136,8 @@ async def image_plane(filepath: str):
     # http://127.0.0.1:8001/image_plane?filepath=/path/to/image.jpg
     # http://10.10.232.240:8001/image_plane?filepath=/mnt/eds_share/share/Spine2D/GlobusSrgMapData_crop_square/test/images/anon_2015313.dic_anteroposterior_fullpadding_lumbar_thoracic.jpg
     # Classify the image_plane
-    sentences = ["anteroposterior", "lateral"]
+    sentences_plane = ["anteroposterior", "lateral"]
+    sentences_anatomy = ['thoracic only', 'lumbar only', 'thoracic and lumbar']
     
     if not filepath:
         return return_source(source, "ERROR: Filepath not provided")
@@ -148,7 +149,12 @@ async def image_plane(filepath: str):
         return img
     
     try:
-        classification = classify_image_plane(img=img, sentences=sentences)
+        image_plane = classify_image_plane(img=img, sentences=sentences_plane)
+        image_anatomy = classify_image_plane(img=img, sentences=sentences_anatomy)
+        classification = {
+            "image_plane": image_plane,
+            "image_anatomy": image_anatomy,
+        }
         fastapi_logger.info(f"Classification result: {classification}")
         return return_source(source, classification)
     except Exception as e:
@@ -167,13 +173,13 @@ async def image_plane(request: Request):
     """
     # Extract the User-Agent and determine the source of the request
     user_agent = request.headers.get("User-Agent", "")
-    
-    if "curl" in user_agent:
-        # The request was made by curl
-        source = "curl"
-    else:
+    fastapi_logger.info(f"User-Agent: {user_agent}")
+    if "Mozilla" in user_agent:
         # The request was made by a web browser or another client
         source = f"a client using web browser: {user_agent}"
+    else:
+        # The request was made by curl or other command line tools
+        source = "curl"
     
     # Classify the image_plane
     sentences_plane = ["anteroposterior", "lateral"]
