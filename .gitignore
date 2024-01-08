@@ -7,7 +7,7 @@ checkpoints/
 
 tests/data/
 tests/static/
-GlobusSrgMapData_full_body/
+GlobusSrgMapData*/
 tests/roco-data/
 Body_Parts_XRay/
 tests/Digital_Knee_Xray*/

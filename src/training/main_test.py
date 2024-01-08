@@ -35,7 +35,8 @@ from training.params import parse_args
 from training.scheduler import cosine_lr, const_lr, const_lr_cooldown
 from training.train import train_one_epoch, evaluate
 from training.file_utils import pt_load, check_exists, start_sync_process, remote_sync
-
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = None
 
 LATEST_CHECKPOINT_NAME = "epoch_latest.pt"
 
