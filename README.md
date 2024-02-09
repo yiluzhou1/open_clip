@@ -128,6 +128,8 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 pip install regex ftfy tqdm huggingface_hub sentencepiece protobuf timm tensorboard transformers fastapi pydicom webdataset pandas fsspec uvicorn
 pip install albumentations python-multipart nibabel SimpleITK matplotlib py7zr rarfile
 pip install .
+conda install -c conda-forge gdcm
+pip install pylibjpeg pylibjpeg-libjpeg pylibjpeg-openjpeg pylibjpeg-rle
 ```
 
 #### Development
